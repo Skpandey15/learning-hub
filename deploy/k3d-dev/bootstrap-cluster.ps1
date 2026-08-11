@@ -41,7 +41,7 @@ if (-not (kubectl get secret learning-hub-dev-tls -n $Namespace --ignore-not-fou
     try {
         docker run --rm -v "${certificateDirectory}:/certs" alpine/openssl:3.5.4 req -x509 -nodes `
             -newkey rsa:2048 -days 365 -keyout /certs/tls.key -out /certs/tls.crt `
-            -subj /CN=learning.localhost -addext 'subjectAltName=DNS:learning.localhost'
+            -subj /CN=learning.127.0.0.1.nip.io -addext 'subjectAltName=DNS:learning.127.0.0.1.nip.io'
         if ($LASTEXITCODE -ne 0) { throw 'TLS certificate generation failed.' }
         $certificatePath = Join-Path $certificateDirectory 'tls.crt'
         $privateKeyPath = Join-Path $certificateDirectory 'tls.key'
@@ -62,3 +62,5 @@ kubectl create configmap keycloak-realm -n $Namespace `
     --from-file=learning-hub-realm.json=platform/keycloak/learning-hub-realm.json `
     --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -f deploy/k3d-dev/platform.yaml
+kubectl patch deployment traefik -n kube-system --type merge `
+    --patch-file deploy/k3d-dev/traefik-label-patch.yaml
