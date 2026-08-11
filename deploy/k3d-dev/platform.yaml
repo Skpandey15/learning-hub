@@ -1,0 +1,201 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: learning-hub-development
+  labels:
+    app.kubernetes.io/part-of: learning-hub
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: learning-hub-development
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: learning-hub-development
+data:
+  10-keycloak.sh: |
+    #!/usr/bin/env sh
+    set -eu
+    psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --set=keycloak_password="$KEYCLOAK_DB_PASSWORD" <<-'SQL'
+    CREATE USER keycloak WITH PASSWORD :'keycloak_password';
+    CREATE DATABASE keycloak OWNER keycloak;
+    SQL
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: learning-hub-postgres
+  namespace: learning-hub-development
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: learning-hub-postgres}
+  strategy: {type: Recreate}
+  template:
+    metadata:
+      labels:
+        app: learning-hub-postgres
+        app.kubernetes.io/part-of: learning-hub
+        app.kubernetes.io/tier: platform
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {fsGroup: 70, seccompProfile: {type: RuntimeDefault}}
+      initContainers:
+        - name: initialize-volume-permissions
+          image: busybox:1.37.0
+          command: [sh, -c, "chown -R 70:70 /var/lib/postgresql /var/run/postgresql"]
+          securityContext: {runAsUser: 0, allowPrivilegeEscalation: false, capabilities: {drop: [ALL], add: [CHOWN]}}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql}
+            - {name: socket, mountPath: /var/run/postgresql}
+      containers:
+        - name: postgres
+          image: postgres:18.4-alpine
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 70
+            runAsGroup: 70
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          env:
+            - {name: POSTGRES_DB, value: learning_hub}
+            - {name: POSTGRES_USER, valueFrom: {secretKeyRef: {name: learning-hub-runtime, key: POSTGRES_USER}}}
+            - {name: POSTGRES_PASSWORD, valueFrom: {secretKeyRef: {name: learning-hub-runtime, key: POSTGRES_PASSWORD}}}
+            - {name: KEYCLOAK_DB_PASSWORD, valueFrom: {secretKeyRef: {name: learning-hub-runtime, key: KEYCLOAK_DB_PASSWORD}}}
+          ports: [{name: postgres, containerPort: 5432}]
+          readinessProbe: {exec: {command: [sh, -c, "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]}, initialDelaySeconds: 5, periodSeconds: 5}
+          livenessProbe: {exec: {command: [sh, -c, "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]}, initialDelaySeconds: 20, periodSeconds: 10}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: 500m, memory: 512Mi}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql}
+            - {name: socket, mountPath: /var/run/postgresql}
+            - {name: init, mountPath: /docker-entrypoint-initdb.d/10-keycloak.sh, subPath: 10-keycloak.sh, readOnly: true}
+      volumes:
+        - {name: data, persistentVolumeClaim: {claimName: postgres-data}}
+        - {name: socket, emptyDir: {sizeLimit: 16Mi}}
+        - {name: init, configMap: {name: postgres-init, defaultMode: 365}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: learning-hub-postgres, namespace: learning-hub-development}
+spec:
+  selector: {app: learning-hub-postgres}
+  ports: [{name: postgres, port: 5432, targetPort: postgres}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: learning-hub-keycloak, namespace: learning-hub-development}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: learning-hub-keycloak}
+  template:
+    metadata:
+      labels:
+        app: learning-hub-keycloak
+        app.kubernetes.io/part-of: learning-hub
+        app.kubernetes.io/tier: platform
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.6.3
+          args: [start-dev, --health-enabled=true, --import-realm]
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          env:
+            - {name: KC_BOOTSTRAP_ADMIN_USERNAME, value: admin}
+            - {name: KC_BOOTSTRAP_ADMIN_PASSWORD, valueFrom: {secretKeyRef: {name: learning-hub-runtime, key: KEYCLOAK_ADMIN_PASSWORD}}}
+            - {name: KC_DB, value: postgres}
+            - {name: KC_DB_URL, value: "jdbc:postgresql://learning-hub-postgres:5432/keycloak"}
+            - {name: KC_DB_USERNAME, value: keycloak}
+            - {name: KC_DB_PASSWORD, valueFrom: {secretKeyRef: {name: learning-hub-runtime, key: KEYCLOAK_DB_PASSWORD}}}
+          ports: [{name: http, containerPort: 8080}, {name: management, containerPort: 9000}]
+          startupProbe: {httpGet: {path: /health/started, port: management}, failureThreshold: 60, periodSeconds: 5}
+          readinessProbe: {httpGet: {path: /health/ready, port: management}, periodSeconds: 5}
+          livenessProbe: {httpGet: {path: /health/live, port: management}, periodSeconds: 10}
+          resources:
+            requests: {cpu: 200m, memory: 512Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          volumeMounts: [{name: realm, mountPath: /opt/keycloak/data/import/learning-hub-realm.json, subPath: learning-hub-realm.json, readOnly: true}]
+      volumes: [{name: realm, configMap: {name: keycloak-realm}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: learning-hub-keycloak, namespace: learning-hub-development}
+spec:
+  selector: {app: learning-hub-keycloak}
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: litellm-config, namespace: learning-hub-development}
+data:
+  config.yaml: |
+    model_list:
+      - model_name: study-model
+        litellm_params:
+          model: os.environ/STUDY_MODEL
+          api_key: os.environ/OPENAI_API_KEY
+    general_settings:
+      master_key: os.environ/LITELLM_MASTER_KEY
+      disable_spend_logs: false
+    litellm_settings:
+      request_timeout: 60
+      num_retries: 1
+      drop_params: true
+      set_verbose: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: learning-hub-litellm, namespace: learning-hub-development}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: learning-hub-litellm}
+  template:
+    metadata:
+      labels:
+        app: learning-hub-litellm
+        app.kubernetes.io/part-of: learning-hub
+        app.kubernetes.io/tier: platform
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: litellm
+          image: ghcr.io/berriai/litellm:main-v1.77.7-stable
+          args: [--config, /app/config.yaml, --port, "4000"]
+          securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
+          env:
+            - {name: LITELLM_MASTER_KEY, valueFrom: {secretKeyRef: {name: learning-hub-runtime, key: LITELLM_API_KEY}}}
+            - {name: OPENAI_API_KEY, valueFrom: {secretKeyRef: {name: learning-hub-runtime, key: OPENAI_API_KEY}}}
+            - {name: STUDY_MODEL, value: openai/gpt-5-mini}
+          ports: [{name: http, containerPort: 4000}]
+          startupProbe: {httpGet: {path: /health/liveliness, port: http}, failureThreshold: 30, periodSeconds: 5}
+          readinessProbe: {httpGet: {path: /health/readiness, port: http}, periodSeconds: 5}
+          livenessProbe: {httpGet: {path: /health/liveliness, port: http}, periodSeconds: 10}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          volumeMounts: [{name: config, mountPath: /app/config.yaml, subPath: config.yaml, readOnly: true}]
+      volumes: [{name: config, configMap: {name: litellm-config}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: learning-hub-litellm, namespace: learning-hub-development}
+spec:
+  selector: {app: learning-hub-litellm}
+  ports: [{name: http, port: 4000, targetPort: http}]

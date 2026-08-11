@@ -198,17 +198,3 @@ jobs:
           path: release-manifest.json
           if-no-files-found: error
           retention-days: 90
-
-  deploy-development:
-    name: Promote to development GitOps
-    needs: [authorize, release-manifest]
-    uses: ./.github/workflows/reusable-promote.yml
-    permissions:
-      contents: read
-    with:
-      environment: development
-      commit: ${{ needs.authorize.outputs.sha }}
-      api-image: ${{ needs.release-manifest.outputs.api }}
-      ai-service-image: ${{ needs.release-manifest.outputs.ai-service }}
-      web-image: ${{ needs.release-manifest.outputs.web }}
-    secrets: inherit

@@ -39,6 +39,12 @@ spec:
             matchLabels:
               app.kubernetes.io/instance: {{ .Release.Name }}
       ports: [{port: 8000, protocol: TCP}, {port: 8080, protocol: TCP}]
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: learning-hub
+              app.kubernetes.io/tier: platform
+      ports: [{port: 4000, protocol: TCP}, {port: 5432, protocol: TCP}, {port: 8080, protocol: TCP}]
     {{- range .Values.networkPolicy.privateEgressCidrs }}
     - to: [{ipBlock: {cidr: {{ . | quote }}}}]
       ports: [{port: 443, protocol: TCP}, {port: 5432, protocol: TCP}]
