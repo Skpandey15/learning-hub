@@ -1,0 +1,215 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit SHA from main to release
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.event.workflow_run.head_sha || inputs.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  authorize:
+    name: Authorize immutable release
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      sha: ${{ steps.release.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Resolve release commit
+        id: release
+        env:
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha || inputs.ref }}
+        run: |
+          if [[ ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Release ref must resolve to a full commit SHA." >&2
+            exit 1
+          fi
+          git cat-file -e "$RELEASE_SHA^{commit}"
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main || {
+            echo "Release commit must belong to main." >&2
+            exit 1
+          }
+          echo "sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+
+  build-images:
+    name: Build, scan, and attest (${{ matrix.component }})
+    needs: authorize
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: api
+            context: .
+            dockerfile: apps/api/Dockerfile
+          - component: ai-service
+            context: apps/ai-service
+            dockerfile: apps/ai-service/Dockerfile
+          - component: web
+            context: apps/web
+            dockerfile: apps/web/Dockerfile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.authorize.outputs.sha }}
+          persist-credentials: false
+      - name: Resolve immutable image name
+        id: image
+        env:
+          IMAGE_OWNER: ${{ github.repository_owner }}
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          owner="${IMAGE_OWNER,,}"
+          echo "name=ghcr.io/$owner/learning-hub-$COMPONENT" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - name: Authenticate to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish multi-architecture image
+        id: build
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.image.outputs.name }}:sha-${{ needs.authorize.outputs.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ needs.authorize.outputs.sha }}
+          cache-from: type=gha,scope=release-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.component }}
+          provenance: mode=max
+          sbom: true
+      - name: Scan published image by digest
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+      - name: Record immutable digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE: ${{ steps.image.outputs.name }}
+          COMPONENT: ${{ matrix.component }}
+        run: |
+          mkdir -p release-digests
+          jq -n --arg component "$COMPONENT" --arg image "$IMAGE" --arg digest "$DIGEST" \
+            '{component: $component, image: $image, digest: $digest}' \
+            > "release-digests/$COMPONENT.json"
+      - name: Upload digest evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digest-${{ matrix.component }}
+          path: release-digests/${{ matrix.component }}.json
+          if-no-files-found: error
+          retention-days: 90
+
+  release-manifest:
+    name: Create release manifest
+    needs: [authorize, build-images]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    outputs:
+      api: ${{ steps.manifest.outputs.api }}
+      ai-service: ${{ steps.manifest.outputs.ai-service }}
+      web: ${{ steps.manifest.outputs.web }}
+    steps:
+      - name: Download image digest evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: digest-*
+          path: release-digests
+          merge-multiple: true
+      - name: Assemble immutable release manifest
+        id: manifest
+        env:
+          RELEASE_SHA: ${{ needs.authorize.outputs.sha }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          for component in api ai-service web; do
+            test -s "release-digests/$component.json"
+          done
+          jq -n \
+            --arg schemaVersion "1" \
+            --arg commit "$RELEASE_SHA" \
+            --arg source "$SOURCE_REPOSITORY" \
+            --arg runId "$RUN_ID" \
+            --slurpfile api release-digests/api.json \
+            --slurpfile ai release-digests/ai-service.json \
+            --slurpfile web release-digests/web.json \
+            '{schemaVersion: ($schemaVersion | tonumber), commit: $commit, sourceRepository: $source, workflowRunId: $runId, images: {api: $api[0], "ai-service": $ai[0], web: $web[0]}}' \
+            > release-manifest.json
+          {
+            echo "api=$(jq -r '.images.api.image + "@" + .images.api.digest' release-manifest.json)"
+            echo "ai-service=$(jq -r '.images["ai-service"].image + "@" + .images["ai-service"].digest' release-manifest.json)"
+            echo "web=$(jq -r '.images.web.image + "@" + .images.web.digest' release-manifest.json)"
+          } >> "$GITHUB_OUTPUT"
+      - name: Attest release manifest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: release-manifest.json
+      - name: Publish release manifest
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ needs.authorize.outputs.sha }}
+          path: release-manifest.json
+          if-no-files-found: error
+          retention-days: 90
+
+  deploy-development:
+    name: Promote to development GitOps
+    if: ${{ vars.GITOPS_OWNER != '' && vars.GITOPS_REPOSITORY_NAME != '' }}
+    needs: [authorize, release-manifest]
+    uses: ./.github/workflows/reusable-promote.yml
+    permissions:
+      contents: read
+    with:
+      environment: development
+      commit: ${{ needs.authorize.outputs.sha }}
+      api-image: ${{ needs.release-manifest.outputs.api }}
+      ai-service-image: ${{ needs.release-manifest.outputs.ai-service }}
+      web-image: ${{ needs.release-manifest.outputs.web }}
+    secrets: inherit

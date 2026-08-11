@@ -1,0 +1,89 @@
+name: Reusable GitOps promotion
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      commit:
+        required: true
+        type: string
+      api-image:
+        required: true
+        type: string
+      ai-service-image:
+        required: true
+        type: string
+      web-image:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    name: Promote ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    steps:
+      - name: Validate immutable release inputs
+        env:
+          COMMIT: ${{ inputs.commit }}
+          API_IMAGE: ${{ inputs.api-image }}
+          AI_IMAGE: ${{ inputs.ai-service-image }}
+          WEB_IMAGE: ${{ inputs.web-image }}
+        run: |
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          for image in "$API_IMAGE" "$AI_IMAGE" "$WEB_IMAGE"; do
+            [[ "$image" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]] || {
+              echo "Promotion accepts digest-pinned GHCR images only." >&2
+              exit 1
+            }
+          done
+      - name: Verify GitHub build attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_REPOSITORY: ${{ github.repository }}
+          API_IMAGE: ${{ inputs.api-image }}
+          AI_IMAGE: ${{ inputs.ai-service-image }}
+          WEB_IMAGE: ${{ inputs.web-image }}
+        run: |
+          for image in "$API_IMAGE" "$AI_IMAGE" "$WEB_IMAGE"; do
+            gh attestation verify "oci://$image" --repo "$SOURCE_REPOSITORY"
+          done
+      - name: Mint short-lived GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.GITOPS_APP_ID }}
+          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          owner: ${{ vars.GITOPS_OWNER }}
+          repositories: ${{ vars.GITOPS_REPOSITORY_NAME }}
+      - name: Request GitOps reconciliation
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITOPS_OWNER: ${{ vars.GITOPS_OWNER }}
+          GITOPS_REPOSITORY: ${{ vars.GITOPS_REPOSITORY_NAME }}
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+          COMMIT: ${{ inputs.commit }}
+          API_IMAGE: ${{ inputs.api-image }}
+          AI_IMAGE: ${{ inputs.ai-service-image }}
+          WEB_IMAGE: ${{ inputs.web-image }}
+        run: |
+          payload=$(jq -n \
+            --arg environment "$TARGET_ENVIRONMENT" \
+            --arg commit "$COMMIT" \
+            --arg api "$API_IMAGE" \
+            --arg ai "$AI_IMAGE" \
+            --arg web "$WEB_IMAGE" \
+            '{event_type: "learning-hub-promote", client_payload: {environment: $environment, commit: $commit, images: {api: $api, "ai-service": $ai, web: $web}}}')
+          gh api --method POST \
+            "repos/$GITOPS_OWNER/$GITOPS_REPOSITORY/dispatches" \
+            --input - <<< "$payload"

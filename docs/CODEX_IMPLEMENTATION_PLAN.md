@@ -117,6 +117,15 @@ Exit criteria: security tests pass and no secret or sensitive prompt appears in 
 
 Exit criteria: a new developer can start the platform from documented steps and complete a generated lesson.
 
+## Phase 9 — Continuous delivery and GitOps
+
+- Implement the build, attestation, GitOps promotion, progressive delivery, database migration, zero-trust, and rollback controls in `CICD_DESIGN.md`.
+- Deploy automatically to development after protected-main merges.
+- Promote immutable digests through staging and production.
+- Enforce signed provenance at admission and validate production canary rollback.
+
+Exit criteria: a merged, approved change is traceable and automatically delivered through the configured environments without long-lived cloud credentials or direct CI cluster access.
+
 ## Test matrix
 
 ### Spring Boot

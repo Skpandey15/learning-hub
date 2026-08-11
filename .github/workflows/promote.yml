@@ -1,0 +1,42 @@
+name: Promote release
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Protected target environment
+        required: true
+        type: choice
+        options: [staging, production]
+      commit:
+        description: Released 40-character commit SHA
+        required: true
+        type: string
+      api-image:
+        description: Digest-pinned API image
+        required: true
+        type: string
+      ai-service-image:
+        description: Digest-pinned AI service image
+        required: true
+        type: string
+      web-image:
+        description: Digest-pinned web image
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    uses: ./.github/workflows/reusable-promote.yml
+    permissions:
+      contents: read
+    with:
+      environment: ${{ inputs.environment }}
+      commit: ${{ inputs.commit }}
+      api-image: ${{ inputs.api-image }}
+      ai-service-image: ${{ inputs.ai-service-image }}
+      web-image: ${{ inputs.web-image }}
+    secrets: inherit

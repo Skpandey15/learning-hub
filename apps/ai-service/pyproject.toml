@@ -15,11 +15,12 @@ dev = [
   "mypy==2.3.0",
   "pytest==9.1.1",
   "pytest-asyncio==1.4.0",
+  "pytest-cov==7.1.0",
   "ruff==0.16.2",
 ]
 
 [tool.pytest.ini_options]
-addopts = "-q"
+addopts = "-q --cov=app --cov-branch --cov-report=term-missing --cov-report=xml:coverage.xml --cov-fail-under=95"
 testpaths = ["tests"]
 pythonpath = ["."]
 
@@ -37,3 +38,16 @@ select = ["E", "F", "I", "B", "UP", "S", "ASYNC"]
 python_version = "3.14"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = false
+exclude_also = [
+  "if TYPE_CHECKING:",
+  "raise NotImplementedError",
+]

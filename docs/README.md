@@ -86,6 +86,10 @@ OpenAI generates study material from server-owned prompts and database metadata.
 - `ADMIN_DESIGN.md`
 - `ZERO_TRUST_SECURITY.md`
 - `DEPENDENCY_BASELINE.md`
+- `CICD_DESIGN.md`
+- `CICD_OPERATIONS.md`
+- `OBSERVABILITY_ERROR_HANDLING.md`
+- `TESTING_QUALITY_GATES.md`
 
 ## Definition of done
 

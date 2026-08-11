@@ -40,3 +40,24 @@ management:
   tracing:
     sampling:
       probability: ${TRACING_SAMPLE_RATE:0.1}
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.learninghub: ${LOG_LEVEL_APP:INFO}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:WARN}
+  structured:
+    format:
+      console: ecs
+    ecs:
+      service:
+        name: ${spring.application.name}
+        version: ${APP_VERSION:0.1.0}
+        environment: ${APP_ENVIRONMENT:development}
+    json:
+      stacktrace:
+        root: first
+        max-length: 8192
+        max-throwable-depth: 40
+        include-common-frames: false
+        include-hashes: true

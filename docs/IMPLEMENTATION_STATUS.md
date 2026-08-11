@@ -32,3 +32,34 @@ Verification:
 Next phase:
 
 - Authentication integration, JWT claim-to-role mapping, database-backed capabilities, zero-trust trusted-proxy controls, and authorization tests.
+
+## Production logging and exception handling
+
+Status: implemented on 2026-08-11.
+
+- ECS JSON logging, correlation IDs, bounded request events, and safe error fingerprints in Spring Boot.
+- RFC problem responses for validation, malformed input, application, security, and unexpected errors.
+- JSON logging, correlation-safe outer middleware, stable AI error taxonomy, redacted bounded frame output, and global fail-safe responses in FastAPI.
+- Safe React render error boundary and query/header-free Nginx JSON access logs.
+- Details and operational rules are documented in `OBSERVABILITY_ERROR_HANDLING.md`.
+
+## Production test coverage gates
+
+Status: implemented on 2026-08-11.
+
+- The Spring API fails `check` below 95% line or branch coverage.
+- The FastAPI service fails `pytest` below 95% branch-aware aggregate coverage.
+- The React application fails `test:coverage` below 95% for lines, branches, functions, or statements.
+- CI runs all three enforced gates on every pull request and every push to `main`.
+- Commands, exclusions, report locations, and the verified baseline are documented in `TESTING_QUALITY_GATES.md`.
+
+## Production CI/CD foundation
+
+Status: implemented on 2026-08-11; external GitOps repository configuration remains an operator prerequisite.
+
+- SHA-pinned CI with concurrency controls, timeouts, least-privilege permissions, retained test evidence, dependency review, and production-container contract builds.
+- Scheduled and change-triggered CodeQL and Trivy security analysis.
+- Immutable multi-architecture GHCR releases with digest scanning, BuildKit SBOM/provenance, GitHub attestations, and an attested release manifest.
+- Automatic development GitOps dispatch and protected staging/production promotion using short-lived GitHub App tokens.
+- Dependabot coverage for Actions, Gradle, Python, npm, and Docker dependencies.
+- Required configuration and operational procedures are documented in `CICD_OPERATIONS.md`.

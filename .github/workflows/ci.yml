@@ -2,60 +2,189 @@ name: CI
 
 on:
   pull_request:
+    branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  JAVA_VERSION: "25"
+  NODE_VERSION: "24.18.1"
+  UV_VERSION: "0.11.25"
+
 jobs:
   api:
+    name: API quality gate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
         with:
           distribution: temurin
-          java-version: "25"
+          java-version: ${{ env.JAVA_VERSION }}
           cache: gradle
-      - run: ./gradlew :apps:api:test --no-daemon
+      - name: Test, analyze, and enforce coverage
+        run: ./gradlew :apps:api:check --no-daemon
+      - name: Publish API test evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: api-test-reports
+          path: |
+            apps/api/build/reports/tests/
+            apps/api/build/reports/jacoco/
+          if-no-files-found: error
+          retention-days: 14
 
   ai-service:
+    name: AI service quality gate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: apps/ai-service
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: "0.11.25"
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: ${{ env.UV_VERSION }}
           enable-cache: true
-      - run: uv sync --frozen --dev
-      - run: uv run ruff check .
-      - run: uv run mypy app
-      - run: uv run pytest
+          cache-dependency-glob: apps/ai-service/uv.lock
+      - name: Verify locked environment
+        run: uv sync --frozen --dev
+      - name: Lint
+        run: uv run ruff check .
+      - name: Type check
+        run: uv run mypy app
+      - name: Test and enforce coverage
+        run: uv run pytest --junitxml=junit.xml
+      - name: Publish AI service test evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ai-service-test-reports
+          path: |
+            apps/ai-service/junit.xml
+            apps/ai-service/coverage.xml
+          if-no-files-found: error
+          retention-days: 14
 
   web:
+    name: Web quality gate
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: "24.14.1"
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm test
-      - run: npm run build
+      - name: Verify locked environment
+        run: npm ci --ignore-scripts
+      - name: Lint
+        run: npm run lint
+      - name: Test and enforce coverage
+        run: npm run test:coverage
+      - name: Production build
+        run: npm run build
+      - name: Publish web test evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-coverage-report
+          path: apps/web/coverage/
+          if-no-files-found: error
+          retention-days: 14
+
+  dependency-review:
+    name: Dependency policy
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0
+
+  container-contracts:
+    name: Container contract (${{ matrix.component }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: api
+            context: .
+            dockerfile: apps/api/Dockerfile
+          - component: ai-service
+            context: apps/ai-service
+            dockerfile: apps/ai-service/Dockerfile
+          - component: web
+            context: apps/web
+            dockerfile: apps/web/Dockerfile
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - name: Build production image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: false
+          cache-from: type=gha,scope=ci-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=ci-${{ matrix.component }}
 
   compose:
+    name: Compose configuration contract
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - run: cp .env.example .env
-      - run: docker compose --env-file .env -f platform/docker/compose.yaml config --quiet
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env.example -f platform/docker/compose.yaml config --quiet
+
+  ci-success:
+    name: CI success
+    if: ${{ always() }}
+    needs: [api, ai-service, web, dependency-review, container-contracts, compose]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Enforce required job results
+        env:
+          RESULTS: ${{ join(needs.*.result, ',') }}
+        run: |
+          if [[ "$RESULTS" =~ (^|,)failure(,|$)|(^|,)cancelled(,|$) ]]; then
+            echo "One or more required CI jobs failed or were cancelled: $RESULTS" >&2
+            exit 1
+          fi
+          echo "All applicable CI jobs passed: $RESULTS"

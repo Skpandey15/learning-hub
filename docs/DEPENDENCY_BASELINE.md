@@ -13,6 +13,7 @@ Use the newest stable, mutually compatible releases available when implementatio
 | Java | 25 LTS | Current LTS; verify Spring/toolchain support at bootstrap |
 | Spring Boot | 4.1.0 | Current stable line |
 | Gradle wrapper | 9.6.1 | Current stable patch; verify Boot plugin matrix |
+| Node.js | 24.18.1 LTS | Stable LTS patch compatible with the pinned Vite and jsdom toolchain |
 | React / React DOM | 19.2.8 | Stable React patch pinned in lockfile |
 | Vite | 8.2.1 | Current stable patch pinned in lockfile |
 | Python | 3.14.6 | Current stable maintenance release |

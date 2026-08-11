@@ -17,6 +17,8 @@ Thumbs.db
 **/__pycache__/
 **/.pytest_cache/
 **/.ruff_cache/
+**/.coverage
+**/coverage.xml
 *.py[cod]
 
 # Node

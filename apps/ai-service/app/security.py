@@ -1,10 +1,11 @@
 import hmac
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.config import Settings, get_settings
+from app.problems import AppError, ErrorCode
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -16,8 +17,4 @@ def require_service_identity(
     if credentials is None or not hmac.compare_digest(
         credentials.credentials.encode(), settings.internal_service_token.encode()
     ):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid service identity",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise AppError(ErrorCode.UNAUTHENTICATED)

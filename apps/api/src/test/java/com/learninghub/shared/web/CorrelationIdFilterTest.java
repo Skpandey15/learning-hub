@@ -32,4 +32,16 @@ class CorrelationIdFilterTest {
 
         assertThat(response.getHeader(CorrelationIdFilter.HEADER)).matches("[0-9a-f-]{36}");
     }
+
+    @Test
+    void generatesCorrelationIdWhenHeaderIsMissing() throws ServletException, IOException {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (req, res) -> {});
+
+        assertThat(response.getHeader(CorrelationIdFilter.HEADER)).matches("[0-9a-f-]{36}");
+        assertThat(request.getAttribute(CorrelationIdFilter.ATTRIBUTE))
+                .isEqualTo(response.getHeader(CorrelationIdFilter.HEADER));
+    }
 }
