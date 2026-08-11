@@ -1,0 +1,68 @@
+name: Security
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin, javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@18420e3271f74589575af831a523c833acda327f # codeql-bundle-v2.26.2
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - name: Analyze
+        uses: github/codeql-action/analyze@18420e3271f74589575af831a523c833acda327f # codeql-bundle-v2.26.2
+        with:
+          category: /language:${{ matrix.language }}
+
+  filesystem-scan:
+    name: Repository vulnerability and misconfiguration scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Scan repository
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Upload scan results
+        if: ${{ always() && hashFiles('trivy-results.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@18420e3271f74589575af831a523c833acda327f # codeql-bundle-v2.26.2
+        with:
+          sarif_file: trivy-results.sarif

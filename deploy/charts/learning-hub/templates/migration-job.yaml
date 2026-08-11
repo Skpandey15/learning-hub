@@ -1,0 +1,53 @@
+{{- if .Values.migration.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "learning-hub.fullname" . }}-migrate-{{ .Release.Revision }}
+  labels:
+    {{- include "learning-hub.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.migration.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "learning-hub.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "learning-hub.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        {{- include "learning-hub.podSecurityContext" . | nindent 8 }}
+      containers:
+        - name: migrate
+          image: {{ required "images.api digest is required" .Values.images.api | quote }}
+          imagePullPolicy: IfNotPresent
+          command: [java]
+          args: [-XX:MaxRAMPercentage=75, -jar, /app/app.jar, --spring.main.web-application-type=none]
+          securityContext:
+            {{- include "learning-hub.containerSecurityContext" . | nindent 12 }}
+            runAsUser: 10001
+            runAsGroup: 10001
+          envFrom:
+            - configMapRef: {name: {{ include "learning-hub.fullname" . }}}
+          env:
+            - name: POSTGRES_USER
+              valueFrom: {secretKeyRef: {name: {{ .Values.existingSecret.name }}, key: {{ .Values.existingSecret.keys.postgresUser }}}}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: {{ .Values.existingSecret.name }}, key: {{ .Values.existingSecret.keys.postgresPassword }}}}
+            - name: INTERNAL_AI_SERVICE_TOKEN
+              valueFrom: {secretKeyRef: {name: {{ .Values.existingSecret.name }}, key: {{ .Values.existingSecret.keys.internalServiceToken }}}}
+          resources:
+            {{- toYaml .Values.resources.api | nindent 12 }}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 64Mi}
+{{- end }}

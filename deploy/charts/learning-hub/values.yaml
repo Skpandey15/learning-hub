@@ -1,0 +1,90 @@
+global:
+  environment: production
+  imagePullSecrets: []
+
+images:
+  api: ""
+  aiService: ""
+  web: ""
+
+replicaCount:
+  api: 2
+  aiService: 2
+  web: 2
+
+serviceAccount:
+  create: true
+  annotations: {}
+
+config:
+  databaseUrl: ""
+  oidcIssuerUri: ""
+  aiServiceBaseUrl: http://learning-hub-ai-service:8000
+  litellmBaseUrl: ""
+  studyModel: openai/gpt-5-mini
+  tracingSampleRate: "0.1"
+
+existingSecret:
+  name: learning-hub-runtime
+  keys:
+    postgresUser: POSTGRES_USER
+    postgresPassword: POSTGRES_PASSWORD
+    internalServiceToken: INTERNAL_AI_SERVICE_TOKEN
+    litellmApiKey: LITELLM_API_KEY
+
+externalSecret:
+  enabled: false
+  refreshInterval: 1h
+  secretStoreRef:
+    name: ""
+    kind: ClusterSecretStore
+  data: {}
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  host: learning.example.com
+  tls:
+    enabled: true
+    secretName: learning-hub-tls
+
+resources:
+  api:
+    requests: {cpu: 250m, memory: 512Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  aiService:
+    requests: {cpu: 200m, memory: 256Mi}
+    limits: {cpu: "1", memory: 1Gi}
+  web:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 250m, memory: 128Mi}
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  ingressNamespaceSelector: {}
+  ingressPodSelector:
+    matchLabels:
+      app.kubernetes.io/component: controller
+  privateEgressCidrs: []
+
+topologySpreadConstraints:
+  enabled: true
+
+revisionHistoryLimit: 5
+terminationGracePeriodSeconds: 30
+
+migration:
+  enabled: true
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600

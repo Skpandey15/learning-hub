@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: learning-hub-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/learning_hub}
+    username: ${POSTGRES_USER:learning_hub}
+    password: ${POSTGRES_PASSWORD:learning_hub}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8081/realms/learning-hub}
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: none
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_RATE:0.1}
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.learninghub: ${LOG_LEVEL_APP:INFO}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:WARN}
+  structured:
+    format:
+      console: ecs
+    ecs:
+      service:
+        name: ${spring.application.name}
+        version: ${APP_VERSION:0.1.0}
+        environment: ${APP_ENVIRONMENT:development}
+    json:
+      stacktrace:
+        root: first
+        max-length: 8192
+        max-throwable-depth: 40
+        include-common-frames: false
+        include-hashes: true

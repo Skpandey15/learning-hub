@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "learning-hub.fullname" . }}
+  labels:
+    {{- include "learning-hub.labels" . | nindent 4 }}
+data:
+  APP_ENVIRONMENT: {{ .Values.global.environment | quote }}
+  ENVIRONMENT: {{ .Values.global.environment | quote }}
+  DATABASE_URL: {{ required "config.databaseUrl is required" .Values.config.databaseUrl | quote }}
+  OIDC_ISSUER_URI: {{ required "config.oidcIssuerUri is required" .Values.config.oidcIssuerUri | quote }}
+  AI_SERVICE_BASE_URL: {{ .Values.config.aiServiceBaseUrl | quote }}
+  LITELLM_BASE_URL: {{ required "config.litellmBaseUrl is required" .Values.config.litellmBaseUrl | quote }}
+  STUDY_MODEL: {{ .Values.config.studyModel | quote }}
+  TRACING_SAMPLE_RATE: {{ .Values.config.tracingSampleRate | quote }}

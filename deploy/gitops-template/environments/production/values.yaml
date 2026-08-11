@@ -1,0 +1,10 @@
+global: {environment: production}
+images: {api: PENDING_RELEASE, aiService: PENDING_RELEASE, web: PENDING_RELEASE}
+config:
+  databaseUrl: jdbc:postgresql://postgres.internal:5432/learning_hub
+  oidcIssuerUri: https://identity.example.com/realms/learning-hub
+  litellmBaseUrl: https://litellm.internal.example.com
+ingress:
+  host: learning.example.com
+  tls: {enabled: true, secretName: learning-hub-production-tls}
+networkPolicy: {privateEgressCidrs: [10.0.0.0/8]}

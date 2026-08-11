@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: learning-hub
+  namespace: argocd
+spec:
+  description: Least-privilege Learning Hub deployment boundary
+  sourceRepos:
+    - https://github.com/Skpandey15/learning-hub.git
+    - https://github.com/Skpandey15/learning-hub-deployments.git
+  destinations:
+    - namespace: learning-hub-*
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - {group: "", kind: ConfigMap}
+    - {group: "", kind: Service}
+    - {group: "", kind: ServiceAccount}
+    - {group: apps, kind: Deployment}
+    - {group: batch, kind: Job}
+    - {group: autoscaling, kind: HorizontalPodAutoscaler}
+    - {group: networking.k8s.io, kind: Ingress}
+    - {group: networking.k8s.io, kind: NetworkPolicy}
+    - {group: policy, kind: PodDisruptionBudget}
+    - {group: external-secrets.io, kind: ExternalSecret}

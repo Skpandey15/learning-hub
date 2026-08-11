@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: learning-hub-staging
+  namespace: argocd
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+spec:
+  project: learning-hub
+  sources:
+    - repoURL: https://github.com/Skpandey15/learning-hub.git
+      targetRevision: REPLACED_BY_RELEASE
+      path: deploy/charts/learning-hub
+      helm:
+        releaseName: learning-hub
+        valueFiles: [$values/environments/staging/values.yaml]
+    - repoURL: https://github.com/Skpandey15/learning-hub-deployments.git
+      targetRevision: main
+      ref: values
+  destination: {server: https://kubernetes.default.svc, namespace: learning-hub-staging}
+  syncPolicy:
+    automated: {prune: true, selfHeal: true, allowEmpty: false}
+    syncOptions: [CreateNamespace=true, PruneLast=true, ServerSideApply=true]
+    retry: {limit: 5, backoff: {duration: 10s, factor: 2, maxDuration: 3m}}
