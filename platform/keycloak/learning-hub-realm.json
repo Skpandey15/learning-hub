@@ -1,0 +1,31 @@
+{
+  "realm": "learning-hub",
+  "enabled": true,
+  "displayName": "Learning Hub",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      { "name": "candidate" },
+      { "name": "interviewer" },
+      { "name": "admin" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "learning-hub-web",
+      "name": "Learning Hub Web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ]
+}
