@@ -1,0 +1,5 @@
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: controller
