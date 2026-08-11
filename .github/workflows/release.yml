@@ -201,7 +201,6 @@ jobs:
 
   deploy-development:
     name: Promote to development GitOps
-    if: ${{ vars.GITOPS_OWNER != '' && vars.GITOPS_REPOSITORY_NAME != '' }}
     needs: [authorize, release-manifest]
     uses: ./.github/workflows/reusable-promote.yml
     permissions:

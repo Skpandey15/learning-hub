@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["images", "config", "existingSecret", "ingress"],
+  "properties": {
+    "images": {
+      "type": "object",
+      "required": ["api", "aiService", "web"],
+      "properties": {
+        "api": {"$ref": "#/definitions/digestImage"},
+        "aiService": {"$ref": "#/definitions/digestImage"},
+        "web": {"$ref": "#/definitions/digestImage"}
+      }
+    },
+    "config": {
+      "type": "object",
+      "required": ["databaseUrl", "oidcIssuerUri", "litellmBaseUrl"],
+      "properties": {
+        "databaseUrl": {"type": "string", "minLength": 1},
+        "oidcIssuerUri": {"type": "string", "format": "uri", "pattern": "^https://"},
+        "litellmBaseUrl": {"type": "string", "format": "uri"}
+      }
+    },
+    "existingSecret": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {"name": {"type": "string", "minLength": 1}}
+    },
+    "ingress": {
+      "type": "object",
+      "required": ["host", "tls"],
+      "properties": {
+        "host": {"type": "string", "minLength": 1},
+        "tls": {
+          "type": "object",
+          "required": ["enabled", "secretName"],
+          "properties": {
+            "enabled": {"const": true},
+            "secretName": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "digestImage": {
+      "type": "string",
+      "pattern": "^ghcr\\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$"
+    }
+  }
+}

@@ -10,6 +10,8 @@ The repository now contains an executable, cluster-isolated GitHub Actions pipel
 - Development is promoted automatically through a short-lived GitHub App token. CI has no cluster credentials.
 - `promote.yml` promotes the same digest-pinned images to protected staging or production environments.
 - Dependabot maintains Actions, Gradle, Python, npm, and container dependencies.
+- `deploy/charts/learning-hub` provides the production Helm deployment contract, including TLS Ingress, internal AI routing, restricted workloads, autoscaling, disruption budgets, secret integration, and default-deny networking.
+- `deploy/gitops-template` contains the receiving deployment-repository workflow and Argo CD applications for development, staging, and production.
 
 ## Required GitHub configuration
 
@@ -63,6 +65,8 @@ The deployment repository must handle a `repository_dispatch` event named `learn
 
 The receiver must validate the payload, verify GitHub attestations, update only the selected environment's digest values, open or merge the policy-appropriate GitOps change, and let Argo CD reconcile it. It must never rebuild images or accept mutable tags.
 
+Seed the separate deployment repository from `deploy/gitops-template`, replace all endpoint/DNS placeholders, install its `AppProject`, and bootstrap the environment `Application` objects. The Argo applications use the application repository's exact release commit for the Helm chart and the deployment repository for environment values.
+
 ## Release and promotion
 
 1. Merge an approved PR into `main`.
@@ -71,12 +75,14 @@ The receiver must validate the payload, verify GitHub attestations, update only 
 4. Verify development health and copy the three digest-qualified image references from the release manifest into `Promote release`.
 5. Select staging. After staging evidence is accepted, rerun with production; the protected environment supplies the human/control-plane approval.
 
-Production rollout strategy, health analysis, and rollback are owned by Argo Rollouts in the deployment repository. Rollback changes desired-state digests to the last known-good manifest; database migrations are never automatically reversed.
+The current chart uses zero-unavailable rolling Deployments protected by readiness probes and disruption budgets. Rollback changes desired-state digests to the last known-good manifest; database migrations are never automatically reversed. Metric-driven Argo Rollouts canary analysis remains a later enhancement and must not be claimed as active until its controller and analysis templates are installed.
+
+Docker Compose is never used by post-merge deployment. It remains a local-development facility only.
 
 ## Failure behavior
 
 - Failed tests, coverage, dependency policy, scans, image publication, attestation, or manifest assembly stop delivery.
 - Superseded CI runs cancel; release and environment promotion never cancel in progress.
-- A missing GitOps configuration skips automatic development promotion but does not publish a false deployment record.
+- A missing GitOps configuration fails the development-promotion stage. Releases cannot appear successfully deployed until the GitOps receiver is configured.
 - Invalid or mutable image references are rejected before a GitOps event is sent.
 - Promotion uses a short-lived installation token and never receives Kubernetes or cloud credentials.

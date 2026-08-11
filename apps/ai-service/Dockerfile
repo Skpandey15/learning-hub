@@ -4,11 +4,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
-RUN groupadd --system app && useradd --system --gid app --home /app app
+RUN groupadd --system --gid 10001 app && useradd --system --uid 10001 --gid 10001 --home /app app
 WORKDIR /app
 COPY --chown=app:app pyproject.toml uv.lock ./
 RUN pip install --no-cache-dir uv==0.11.25 && uv sync --frozen --no-dev
 COPY --chown=app:app app ./app
-USER app
+USER 10001:10001
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

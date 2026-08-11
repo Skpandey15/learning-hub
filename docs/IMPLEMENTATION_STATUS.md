@@ -63,3 +63,5 @@ Status: implemented on 2026-08-11; external GitOps repository configuration rema
 - Automatic development GitOps dispatch and protected staging/production promotion using short-lived GitHub App tokens.
 - Dependabot coverage for Actions, Gradle, Python, npm, and Docker dependencies.
 - Required configuration and operational procedures are documented in `CICD_OPERATIONS.md`.
+- Production Kubernetes Helm objects now cover API, AI service, web, Services, TLS Ingress, HPA, PDB, External Secrets integration, topology spreading, and NetworkPolicies.
+- A GitOps receiver and automated Argo CD applications are provided for development, staging, and production; external cluster, DNS, certificate, secret-store, and repository bootstrap remain operator prerequisites.

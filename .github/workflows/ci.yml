@@ -172,10 +172,31 @@ jobs:
       - name: Validate Compose configuration
         run: docker compose --env-file .env.example -f platform/docker/compose.yaml config --quiet
 
+  kubernetes:
+    name: Kubernetes deployment contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.2.1
+      - name: Lint Helm chart
+        run: helm lint deploy/charts/learning-hub -f deploy/charts/learning-hub/ci/test-values.yaml --strict
+      - name: Validate rendered Kubernetes objects
+        run: >-
+          helm template learning-hub deploy/charts/learning-hub
+          -f deploy/charts/learning-hub/ci/test-values.yaml |
+          docker run --rm -i
+          ghcr.io/yannh/kubeconform@sha256:85dbef6b4b312b99133decc9c6fc9495e9fc5f92293d4ff3b7e1b30f5611823c
+          -strict -summary -kubernetes-version 1.31.0
+
   ci-success:
     name: CI success
     if: ${{ always() }}
-    needs: [api, ai-service, web, dependency-review, container-contracts, compose]
+    needs: [api, ai-service, web, dependency-review, container-contracts, compose, kubernetes]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

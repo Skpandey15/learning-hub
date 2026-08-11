@@ -1,0 +1,68 @@
+name: Reconcile Learning Hub release
+
+on:
+  repository_dispatch:
+    types: [learning-hub-promote]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: learning-hub-${{ github.event.client_payload.environment }}
+  cancel-in-progress: false
+
+jobs:
+  update-desired-state:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: ${{ github.event.client_payload.environment }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+      - name: Validate signed promotion payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_ENVIRONMENT: ${{ github.event.client_payload.environment }}
+          COMMIT: ${{ github.event.client_payload.commit }}
+          API_IMAGE: ${{ github.event.client_payload.images.api }}
+          AI_IMAGE: ${{ github.event.client_payload.images['ai-service'] }}
+          WEB_IMAGE: ${{ github.event.client_payload.images.web }}
+        run: |
+          [[ "$TARGET_ENVIRONMENT" =~ ^(development|staging|production)$ ]]
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          for image in "$API_IMAGE" "$AI_IMAGE" "$WEB_IMAGE"; do
+            [[ "$image" =~ ^ghcr\.io/[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]]
+            gh attestation verify "oci://$image" --repo Skpandey15/learning-hub
+          done
+          test -f "environments/$TARGET_ENVIRONMENT/values.yaml"
+          test -f "environments/$TARGET_ENVIRONMENT/application.yaml"
+      - name: Update digest-only desired state
+        env:
+          TARGET_ENVIRONMENT: ${{ github.event.client_payload.environment }}
+          COMMIT: ${{ github.event.client_payload.commit }}
+          API_IMAGE: ${{ github.event.client_payload.images.api }}
+          AI_IMAGE: ${{ github.event.client_payload.images['ai-service'] }}
+          WEB_IMAGE: ${{ github.event.client_payload.images.web }}
+        run: |
+          values="environments/$TARGET_ENVIRONMENT/values.yaml"
+          application="environments/$TARGET_ENVIRONMENT/application.yaml"
+          sed -i -E "s|^  api:.*$|  api: \"$API_IMAGE\"|" "$values"
+          sed -i -E "s|^  aiService:.*$|  aiService: \"$AI_IMAGE\"|" "$values"
+          sed -i -E "s|^  web:.*$|  web: \"$WEB_IMAGE\"|" "$values"
+          sed -i -E "0,/targetRevision:/s|targetRevision:.*$|targetRevision: $COMMIT|" "$application"
+      - name: Commit auditable desired state
+        env:
+          TARGET_ENVIRONMENT: ${{ github.event.client_payload.environment }}
+          COMMIT: ${{ github.event.client_payload.commit }}
+        run: |
+          git config user.name "learning-hub-release[bot]"
+          git config user.email "learning-hub-release[bot]@users.noreply.github.com"
+          git add "environments/$TARGET_ENVIRONMENT"
+          git diff --cached --exit-code && {
+            echo "Desired state already matches release $COMMIT"
+            exit 0
+          }
+          git commit -m "Deploy learning-hub $COMMIT to $TARGET_ENVIRONMENT"
+          git push

@@ -1,0 +1,15 @@
+images:
+  api: ghcr.io/example/learning-hub-api@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  aiService: ghcr.io/example/learning-hub-ai-service@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  web: ghcr.io/example/learning-hub-web@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+config:
+  databaseUrl: jdbc:postgresql://postgres.internal:5432/learning_hub
+  oidcIssuerUri: https://identity.example.com/realms/learning-hub
+  litellmBaseUrl: https://litellm.internal.example.com
+ingress:
+  host: learning.example.com
+  tls:
+    enabled: true
+    secretName: learning-hub-tls
+networkPolicy:
+  privateEgressCidrs: [10.0.0.0/8]

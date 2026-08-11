@@ -1,0 +1,46 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "learning-hub.fullname" . }}-default-deny
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "learning-hub.fullname" . }}-allowed-traffic
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector: {{ toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+          podSelector: {{ toYaml .Values.networkPolicy.ingressPodSelector | nindent 12 }}
+      ports: [{port: 8080, protocol: TCP}]
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports: [{port: 8000, protocol: TCP}, {port: 8080, protocol: TCP}]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports: [{port: 53, protocol: UDP}, {port: 53, protocol: TCP}]
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+      ports: [{port: 8000, protocol: TCP}, {port: 8080, protocol: TCP}]
+    {{- range .Values.networkPolicy.privateEgressCidrs }}
+    - to: [{ipBlock: {cidr: {{ . | quote }}}}]
+      ports: [{port: 443, protocol: TCP}, {port: 5432, protocol: TCP}]
+    {{- end }}
+{{- end }}
