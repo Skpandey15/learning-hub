@@ -17,7 +17,7 @@
       "required": ["databaseUrl", "oidcIssuerUri", "litellmBaseUrl"],
       "properties": {
         "databaseUrl": {"type": "string", "minLength": 1},
-        "oidcIssuerUri": {"type": "string", "format": "uri", "pattern": "^https://"},
+          "oidcIssuerUri": {"type": "string", "format": "uri", "pattern": "^(https://|http://learning-hub-keycloak:8080/)"},
         "litellmBaseUrl": {"type": "string", "format": "uri"}
       }
     },
