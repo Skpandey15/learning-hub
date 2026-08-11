@@ -2,6 +2,8 @@ package com.learninghub.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,5 +39,14 @@ class SecurityConfigurationIntegrationTest {
                 .getContentAsString();
 
         assertThat(body).contains("UNAUTHENTICATED", "correlationId");
+    }
+
+    @Test
+    void requiresCsrfForStateChangingRequestsWithoutBearerAuthentication() throws Exception {
+        mockMvc.perform(post("/api/v1/protected"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/protected").with(csrf()))
+                .andExpect(status().isUnauthorized());
     }
 }
