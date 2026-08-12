@@ -19,6 +19,8 @@ serviceAccount:
 config:
   databaseUrl: ""
   oidcIssuerUri: ""
+  oidcJwkSetUri: ""
+  oidcAudience: learning-hub-api
   aiServiceBaseUrl: http://learning-hub-ai-service:8000
   litellmBaseUrl: ""
   studyModel: openai/gpt-5-mini
@@ -31,6 +33,7 @@ existingSecret:
     postgresPassword: POSTGRES_PASSWORD
     internalServiceToken: INTERNAL_AI_SERVICE_TOKEN
     litellmApiKey: LITELLM_API_KEY
+    auditIpHashSalt: AUDIT_IP_HASH_SALT
 
 externalSecret:
   enabled: false

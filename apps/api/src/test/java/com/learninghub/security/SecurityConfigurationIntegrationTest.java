@@ -19,7 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
     "spring.datasource.password=",
     "spring.security.oauth2.resourceserver.jwt.jwk-set-uri=http://127.0.0.1:9/unreachable",
     "spring.flyway.enabled=false",
-    "spring.jpa.hibernate.ddl-auto=none"
+    "spring.jpa.hibernate.ddl-auto=create-drop"
 })
 @AutoConfigureMockMvc
 class SecurityConfigurationIntegrationTest {

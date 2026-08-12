@@ -9,6 +9,8 @@ data:
   ENVIRONMENT: {{ .Values.global.environment | quote }}
   DATABASE_URL: {{ required "config.databaseUrl is required" .Values.config.databaseUrl | quote }}
   OIDC_ISSUER_URI: {{ required "config.oidcIssuerUri is required" .Values.config.oidcIssuerUri | quote }}
+  OIDC_JWK_SET_URI: {{ required "config.oidcJwkSetUri is required" .Values.config.oidcJwkSetUri | quote }}
+  OIDC_AUDIENCE: {{ required "config.oidcAudience is required" .Values.config.oidcAudience | quote }}
   AI_SERVICE_BASE_URL: {{ .Values.config.aiServiceBaseUrl | quote }}
   LITELLM_BASE_URL: {{ required "config.litellmBaseUrl is required" .Values.config.litellmBaseUrl | quote }}
   STUDY_MODEL: {{ .Values.config.studyModel | quote }}

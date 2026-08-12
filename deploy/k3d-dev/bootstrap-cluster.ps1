@@ -31,8 +31,15 @@ if (-not (kubectl get secret learning-hub-runtime -n $Namespace --ignore-not-fou
         --from-literal=KEYCLOAK_DB_PASSWORD=$(New-RandomToken) `
         --from-literal=KEYCLOAK_ADMIN_PASSWORD=$(New-RandomToken) `
         --from-literal=INTERNAL_AI_SERVICE_TOKEN=$(New-RandomToken) `
+        --from-literal=AUDIT_IP_HASH_SALT=$(New-RandomToken) `
         --from-literal=LITELLM_API_KEY=$liteLlmKey `
         --from-literal=OPENAI_API_KEY=$openAiKey
+}
+
+if (-not (kubectl get secret learning-hub-runtime -n $Namespace -o jsonpath='{.data.AUDIT_IP_HASH_SALT}')) {
+    $encodedAuditSalt = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((New-RandomToken)))
+    $secretPatch = @{ data = @{ AUDIT_IP_HASH_SALT = $encodedAuditSalt } } | ConvertTo-Json -Compress
+    kubectl patch secret learning-hub-runtime -n $Namespace --type merge --patch $secretPatch
 }
 
 if (-not (kubectl get secret learning-hub-dev-tls -n $Namespace --ignore-not-found -o name)) {

@@ -18,6 +18,12 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${OIDC_ISSUER_URI:http://localhost:8081/realms/learning-hub}
+          jwk-set-uri: ${OIDC_JWK_SET_URI:${OIDC_ISSUER_URI:http://localhost:8081/realms/learning-hub}/protocol/openid-connect/certs}
+          audiences: ${OIDC_AUDIENCE:learning-hub-api}
+
+security:
+  audit:
+    ip-hash-salt: ${AUDIT_IP_HASH_SALT:local-development-only-change-me}
 
 server:
   port: ${SERVER_PORT:8080}

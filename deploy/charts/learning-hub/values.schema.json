@@ -14,10 +14,12 @@
     },
     "config": {
       "type": "object",
-      "required": ["databaseUrl", "oidcIssuerUri", "litellmBaseUrl"],
+      "required": ["databaseUrl", "oidcIssuerUri", "oidcJwkSetUri", "oidcAudience", "litellmBaseUrl"],
       "properties": {
         "databaseUrl": {"type": "string", "minLength": 1},
           "oidcIssuerUri": {"type": "string", "format": "uri", "pattern": "^(https://|http://learning-hub-keycloak:8080/)"},
+          "oidcJwkSetUri": {"type": "string", "format": "uri"},
+        "oidcAudience": {"type": "string", "minLength": 1},
         "litellmBaseUrl": {"type": "string", "format": "uri"}
       }
     },

@@ -22,6 +22,10 @@ spec:
     - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service: {name: learning-hub-keycloak, port: {name: http}}
           - path: /api
             pathType: Prefix
             backend:

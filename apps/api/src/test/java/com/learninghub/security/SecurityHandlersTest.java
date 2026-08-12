@@ -1,6 +1,8 @@
 package com.learninghub.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import com.learninghub.shared.web.CorrelationIdFilter;
 import com.learninghub.shared.web.ProblemDetailsFactory;
@@ -22,15 +24,18 @@ class SecurityHandlersTest {
         request.setAttribute(CorrelationIdFilter.ATTRIBUTE, "request-12345678");
 
         MockHttpServletResponse unauthenticated = new MockHttpServletResponse();
-        new ProblemAuthenticationEntryPoint(writer).commence(
+        SecurityAuditService audit = mock(SecurityAuditService.class);
+        new ProblemAuthenticationEntryPoint(writer, audit).commence(
                 request, unauthenticated, new BadCredentialsException("hidden"));
 
         MockHttpServletResponse denied = new MockHttpServletResponse();
-        new ProblemAccessDeniedHandler(writer).handle(
+        new ProblemAccessDeniedHandler(writer, audit).handle(
                 request, denied, new AccessDeniedException("hidden"));
 
         assertThat(unauthenticated.getStatus()).isEqualTo(401);
         assertThat(denied.getStatus()).isEqualTo(403);
         assertThat(denied.getHeader("WWW-Authenticate")).isNull();
+        verify(audit).record(null, request, "AUTHENTICATION", "/api/v1/resource", "DENIED");
+        verify(audit).record(null, request, "AUTHORIZATION", "/api/v1/resource", "DENIED");
     }
 }
