@@ -24,7 +24,7 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["https://learning.127.0.0.1.nip.io:8443/auth/callback", "http://localhost:3000/auth/callback"],
+      "redirectUris": ["https://learning.127.0.0.1.nip.io:8443/oidc/callback", "http://localhost:3000/oidc/callback"],
       "webOrigins": ["https://learning.127.0.0.1.nip.io:8443", "http://localhost:3000"],
       "attributes": {
         "pkce.code.challenge.method": "S256",

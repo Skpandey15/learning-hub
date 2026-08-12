@@ -5,7 +5,7 @@ const origin = window.location.origin;
 export const userManager = new UserManager({
   authority: `${origin}/auth/realms/learning-hub`,
   client_id: "learning-hub-web",
-  redirect_uri: `${origin}/auth/callback`,
+  redirect_uri: `${origin}/oidc/callback`,
   post_logout_redirect_uri: `${origin}/signed-out`,
   response_type: "code",
   scope: "openid profile email roles",

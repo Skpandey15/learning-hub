@@ -26,7 +26,7 @@ export function App() {
   return (
     <Routes>
       <Route path="/learn" element={<ProtectedRoute><LearningHome /></ProtectedRoute>} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/oidc/callback" element={<AuthCallback />} />
       <Route path="/admin/access-policy" element={<ProtectedRoute><AccessPolicyPage /></ProtectedRoute>} />
       <Route path="/signed-out" element={<main className="page-shell"><h1>Signed out</h1><p>Your local session has ended.</p></main>} />
       <Route path="*" element={<Navigate to="/learn" replace />} />
