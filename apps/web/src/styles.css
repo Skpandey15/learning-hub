@@ -15,6 +15,11 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+button { border: 0; border-radius: .65rem; background: #153c2b; color: white; padding: .75rem 1rem; font: inherit; font-weight: 700; cursor: pointer; }
+button:hover, button:focus-visible { background: #245f45; }
+label { display: block; margin: 1rem 0; font-size: 1.05rem; }
+input[type="checkbox"] { width: 1.1rem; height: 1.1rem; margin-right: .65rem; }
 
 .page-shell {
   width: min(100% - 2rem, 72rem);

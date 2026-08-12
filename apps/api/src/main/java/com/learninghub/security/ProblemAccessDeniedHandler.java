@@ -12,9 +12,11 @@ import org.springframework.stereotype.Component;
 @Component
 public final class ProblemAccessDeniedHandler implements AccessDeniedHandler {
     private final SecurityProblemWriter writer;
+    private final SecurityAuditService audit;
 
-    public ProblemAccessDeniedHandler(SecurityProblemWriter writer) {
+    public ProblemAccessDeniedHandler(SecurityProblemWriter writer, SecurityAuditService audit) {
         this.writer = writer;
+        this.audit = audit;
     }
 
     @Override
@@ -22,6 +24,8 @@ public final class ProblemAccessDeniedHandler implements AccessDeniedHandler {
             HttpServletRequest request,
             HttpServletResponse response,
             AccessDeniedException exception) throws IOException, ServletException {
+        audit.record(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication(),
+                request, "AUTHORIZATION", request.getRequestURI(), "DENIED");
         writer.write(ErrorCode.ACCESS_DENIED, request, response);
     }
 }

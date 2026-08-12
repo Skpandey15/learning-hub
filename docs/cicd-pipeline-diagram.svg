@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">Learning Hub CI/CD Pipeline</title>
+  <desc id="desc">From pull request quality gates through immutable release and automatic deployment to the local k3d development cluster.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7faf7"/>
+      <stop offset="1" stop-color="#e8f2eb"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#102218" flood-opacity=".12"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#397152"/>
+    </marker>
+    <style>
+      .title{font:700 46px Inter,Segoe UI,sans-serif;fill:#102218}.sub{font:400 20px Inter,Segoe UI,sans-serif;fill:#4d6356}
+      .phase{font:700 15px Inter,Segoe UI,sans-serif;letter-spacing:2px;fill:#397152}
+      .box{fill:#fff;stroke:#a9c4b2;stroke-width:2;rx:18;filter:url(#shadow)}
+      .box2{fill:#e8f4ec;stroke:#6e9c7d;stroke-width:2;rx:18;filter:url(#shadow)}
+      .gate{fill:#fff7dc;stroke:#c29a26;stroke-width:2;filter:url(#shadow)}
+      .success{fill:#173f2b;stroke:#173f2b;stroke-width:2;rx:18;filter:url(#shadow)}
+      .bad{fill:#fff0ee;stroke:#c85b52;stroke-width:2;rx:15}
+      .h{font:700 22px Inter,Segoe UI,sans-serif;fill:#102218;text-anchor:middle}.p{font:400 16px Inter,Segoe UI,sans-serif;fill:#42594b;text-anchor:middle}
+      .white{fill:#fff}.arrow{fill:none;stroke:#397152;stroke-width:4;marker-end:url(#arrow)}.dash{fill:none;stroke:#9aae9f;stroke-width:3;stroke-dasharray:8 8;marker-end:url(#arrow)}
+      .label{font:700 14px Inter,Segoe UI,sans-serif;fill:#397152;text-anchor:middle}.red{fill:#a43f38}
+    </style>
+  </defs>
+  <rect width="1600" height="1120" fill="url(#bg)"/>
+  <text x="100" y="72" class="phase">LEARNING HUB · PRODUCTION-GRADE DELIVERY</text>
+  <text x="100" y="130" class="title">CI/CD Pipeline</text>
+  <text x="100" y="170" class="sub">Quality-gated, security-scanned, immutable deployment to the local k3d development environment</text>
+
+  <text x="100" y="230" class="phase">1 · VALIDATE</text>
+  <rect x="100" y="255" width="230" height="105" class="box"/>
+  <text x="215" y="300" class="h">Pull Request</text><text x="215" y="330" class="p">Reviewable change</text>
+  <path d="M330 307 H390" class="arrow"/>
+  <rect x="390" y="235" width="730" height="150" class="box2"/>
+  <text x="755" y="274" class="h">Parallel CI Quality Gates</text>
+  <text x="540" y="315" class="p">API tests + ≥95%</text><text x="755" y="315" class="p">AI lint/types + ≥95%</text><text x="970" y="315" class="p">Web lint/build + ≥95%</text>
+  <text x="540" y="348" class="p">Container contracts</text><text x="755" y="348" class="p">CodeQL + dependencies</text><text x="970" y="348" class="p">Helm + Kubernetes</text>
+  <path d="M1120 307 H1185" class="arrow"/>
+  <polygon points="1280,240 1375,307 1280,374 1185,307" class="gate"/>
+  <text x="1280" y="299" class="h">All pass?</text><text x="1280" y="327" class="p">Required gate</text>
+  <path d="M1375 307 H1470 V405" class="dash"/>
+  <rect x="1378" y="405" width="190" height="70" class="bad"/><text x="1473" y="447" class="h red">Block merge</text>
+
+  <path d="M1280 374 V440 H1110" class="arrow"/><text x="1240" y="421" class="label">YES</text>
+  <rect x="875" y="405" width="235" height="90" class="box"/>
+  <text x="992" y="444" class="h">Merge to main</text><text x="992" y="472" class="p">Trusted branch</text>
+
+  <text x="100" y="555" class="phase">2 · RELEASE</text>
+  <path d="M875 450 H805 V595" class="arrow"/>
+  <rect x="650" y="575" width="310" height="100" class="box"/>
+  <text x="805" y="616" class="h">Build 3 Images</text><text x="805" y="646" class="p">API · AI Service · Web</text>
+  <path d="M650 625 H580" class="arrow"/>
+  <rect x="270" y="575" width="310" height="100" class="box"/>
+  <text x="425" y="616" class="h">Publish to GHCR</text><text x="425" y="646" class="p">AMD64 + ARM64</text>
+  <path d="M425 675 V735" class="arrow"/>
+  <rect x="270" y="735" width="310" height="100" class="box2"/>
+  <text x="425" y="776" class="h">Scan &amp; Attest</text><text x="425" y="806" class="p">Block High/Critical findings</text>
+  <path d="M580 785 H650" class="arrow"/>
+  <rect x="650" y="735" width="310" height="100" class="box"/>
+  <text x="805" y="776" class="h">Release Manifest</text><text x="805" y="806" class="p">Immutable SHA-256 digests</text>
+
+  <text x="1050" y="555" class="phase">3 · DEPLOY &amp; VERIFY</text>
+  <path d="M960 785 H1040" class="arrow"/>
+  <rect x="1040" y="575" width="430" height="100" class="box"/>
+  <text x="1255" y="616" class="h">Repository-Scoped Runner</text><text x="1255" y="646" class="p">Windows · k3d-dev label</text>
+  <path d="M1255 675 V735" class="arrow"/>
+  <rect x="1040" y="735" width="430" height="100" class="box2"/>
+  <text x="1255" y="776" class="h">Atomic Helm Deployment</text><text x="1255" y="806" class="p">Secrets · TLS · Platform · Migration</text>
+  <path d="M1255 835 V895" class="arrow"/>
+  <rect x="1040" y="895" width="430" height="100" class="box"/>
+  <text x="1255" y="933" class="h">Verify k3d Environment</text><text x="1255" y="963" class="p">Rollouts · replicas · HTTPS health</text>
+  <path d="M1040 945 H960" class="arrow"/>
+  <rect x="475" y="885" width="485" height="120" class="success"/>
+  <text x="718" y="930" class="h white">Development Deployment Successful</text>
+  <text x="718" y="967" class="p white">learning.127.0.0.1.nip.io:8443</text>
+
+  <rect x="100" y="885" width="300" height="120" class="box"/>
+  <text x="250" y="922" class="h">k3d Workloads</text>
+  <text x="250" y="954" class="p">API 2/2 · AI 2/2 · Web 2/2</text>
+  <text x="250" y="981" class="p">PostgreSQL · Keycloak · LiteLLM</text>
+  <path d="M475 945 H400" class="arrow"/>
+  <text x="100" y="1070" class="sub">Failure at any gate stops promotion. Helm uses atomic rollback; images are deployed by digest, never mutable tags.</text>
+</svg>

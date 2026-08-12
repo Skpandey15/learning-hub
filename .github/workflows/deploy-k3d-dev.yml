@@ -63,6 +63,8 @@ jobs:
             --set-string global.environment=development `
             --set-string config.databaseUrl='${{ vars.DEV_DATABASE_URL }}' `
             --set-string config.oidcIssuerUri='${{ vars.DEV_OIDC_ISSUER_URI }}' `
+            --set-string config.oidcJwkSetUri='${{ vars.DEV_OIDC_JWK_SET_URI }}' `
+            --set-string config.oidcAudience='${{ vars.DEV_OIDC_AUDIENCE }}' `
             --set-string config.litellmBaseUrl='${{ vars.DEV_LITELLM_BASE_URL }}' `
             --set-string ingress.className=traefik `
             --set-string ingress.host='${{ vars.DEV_INGRESS_HOST }}' `

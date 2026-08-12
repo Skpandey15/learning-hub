@@ -113,7 +113,7 @@ spec:
       containers:
         - name: keycloak
           image: quay.io/keycloak/keycloak:26.6.3
-          args: [start-dev, --health-enabled=true, --import-realm]
+          args: [start-dev, --health-enabled=true, --import-realm, --http-relative-path=/auth, --hostname=https://learning.127.0.0.1.nip.io:8443/auth, --hostname-backchannel-dynamic=true, --proxy-headers=xforwarded]
           securityContext: {allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}}
           env:
             - {name: KC_BOOTSTRAP_ADMIN_USERNAME, value: admin}
@@ -123,9 +123,9 @@ spec:
             - {name: KC_DB_USERNAME, value: keycloak}
             - {name: KC_DB_PASSWORD, valueFrom: {secretKeyRef: {name: learning-hub-runtime, key: KEYCLOAK_DB_PASSWORD}}}
           ports: [{name: http, containerPort: 8080}, {name: management, containerPort: 9000}]
-          startupProbe: {httpGet: {path: /health/started, port: management}, failureThreshold: 60, periodSeconds: 5}
-          readinessProbe: {httpGet: {path: /health/ready, port: management}, periodSeconds: 5}
-          livenessProbe: {httpGet: {path: /health/live, port: management}, periodSeconds: 10}
+          startupProbe: {httpGet: {path: /auth/health/started, port: management}, failureThreshold: 60, periodSeconds: 5}
+          readinessProbe: {httpGet: {path: /auth/health/ready, port: management}, periodSeconds: 5}
+          livenessProbe: {httpGet: {path: /auth/health/live, port: management}, periodSeconds: 10}
           resources:
             requests: {cpu: 200m, memory: 512Mi}
             limits: {cpu: "1", memory: 1Gi}

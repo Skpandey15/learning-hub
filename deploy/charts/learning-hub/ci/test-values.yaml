@@ -5,6 +5,8 @@ images:
 config:
   databaseUrl: jdbc:postgresql://postgres.internal:5432/learning_hub
   oidcIssuerUri: https://identity.example.com/realms/learning-hub
+  oidcJwkSetUri: https://identity.example.com/realms/learning-hub/protocol/openid-connect/certs
+  oidcAudience: learning-hub-api
   litellmBaseUrl: https://litellm.internal.example.com
 ingress:
   host: learning.example.com

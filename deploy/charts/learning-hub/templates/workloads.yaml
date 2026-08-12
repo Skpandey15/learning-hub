@@ -81,6 +81,8 @@ spec:
               valueFrom: {secretKeyRef: {name: {{ $root.Values.existingSecret.name }}, key: {{ $root.Values.existingSecret.keys.postgresPassword }}}}
             - name: INTERNAL_AI_SERVICE_TOKEN
               valueFrom: {secretKeyRef: {name: {{ $root.Values.existingSecret.name }}, key: {{ $root.Values.existingSecret.keys.internalServiceToken }}}}
+            - name: AUDIT_IP_HASH_SALT
+              valueFrom: {secretKeyRef: {name: {{ $root.Values.existingSecret.name }}, key: {{ $root.Values.existingSecret.keys.auditIpHashSalt }}}}
           {{- else if eq $component "ai-service" }}
           env:
             - name: INTERNAL_SERVICE_TOKEN

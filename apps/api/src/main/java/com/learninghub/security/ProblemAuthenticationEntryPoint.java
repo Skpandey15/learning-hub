@@ -12,9 +12,11 @@ import org.springframework.stereotype.Component;
 @Component
 public final class ProblemAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final SecurityProblemWriter writer;
+    private final SecurityAuditService audit;
 
-    public ProblemAuthenticationEntryPoint(SecurityProblemWriter writer) {
+    public ProblemAuthenticationEntryPoint(SecurityProblemWriter writer, SecurityAuditService audit) {
         this.writer = writer;
+        this.audit = audit;
     }
 
     @Override
@@ -22,6 +24,7 @@ public final class ProblemAuthenticationEntryPoint implements AuthenticationEntr
             HttpServletRequest request,
             HttpServletResponse response,
             AuthenticationException exception) throws IOException, ServletException {
+        audit.record(null, request, "AUTHENTICATION", request.getRequestURI(), "DENIED");
         writer.write(ErrorCode.UNAUTHENTICATED, request, response);
     }
 }

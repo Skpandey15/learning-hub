@@ -13,6 +13,16 @@ Never grant trust because a request originates on an internal network. Every hum
 - Forwarded identity/device headers are accepted only from pinned trusted-proxy addresses after the proxy strips incoming copies.
 - Administrator routes use a separate access policy and require phishing-resistant MFA where available.
 
+## Implemented authentication and authorization controls
+
+- Browser authentication uses OIDC Authorization Code flow with mandatory S256 PKCE; implicit and password grants are disabled.
+- Access tokens are held in session storage, expire after five minutes, and are never sent as cookies.
+- The API maps only the allow-listed Keycloak realm roles `candidate`, `interviewer`, and `admin`.
+- API routes are deny-by-default. Administrative policy routes require `ROLE_ADMIN`; study routes require an approved learning role and the database-backed access policy.
+- Candidate and interviewer access can be shared or configured independently through the audited admin endpoint and UI.
+- Authentication failures, authorization denials, session reads, study access, and policy changes create append-only audit records. Source IP addresses are salted and hashed before persistence.
+- CSRF remains enabled. Only requests carrying bearer authorization are exempt because credentials are not ambiently attached by the browser.
+
 ## Workload access
 
 - Public ingress reaches only the web/API gateway and identity endpoints.
