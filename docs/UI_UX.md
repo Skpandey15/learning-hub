@@ -37,7 +37,7 @@ Admin
 | `/learn/topics/:topicId` | Topic overview and study content |
 | `/learn/paths/:pathSlug` | Ordered learning path |
 | `/progress` | Personal progress dashboard |
-| `/auth/callback` | OIDC callback |
+| `/oidc/callback` | OIDC callback |
 | `/admin` | Admin dashboard |
 | `/admin/ecosystems` | Ecosystem management |
 | `/admin/ecosystems/:id` | Technology/topic hierarchy editor |
