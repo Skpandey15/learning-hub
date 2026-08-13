@@ -105,5 +105,6 @@ nav { display: flex; align-items: center; gap: 1rem; }
 .study-copy { white-space: pre-wrap; line-height: 1.7; }
 pre { overflow-x: auto; padding: 1rem; border-radius: .75rem; background: #101813; color: #e7f6eb; }
 .admin-form { display: grid; gap: .8rem; max-width: 42rem; margin-block: 2rem; padding: 1.5rem; border: 1px solid #cad7c9; border-radius: 1rem; background: white; }
+.admin-form .form-field { display: grid; gap: .45rem; margin: 0; color: #243b2f; font-size: .95rem; font-weight: 700; }
 input, textarea { width: 100%; padding: .75rem; border: 1px solid #8da091; border-radius: .5rem; font: inherit; }
 textarea { min-height: 6rem; resize: vertical; }

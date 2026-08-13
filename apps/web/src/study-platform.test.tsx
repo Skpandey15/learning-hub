@@ -95,6 +95,10 @@ describe("study platform pages", () => {
       .mockImplementationOnce(() => response(content))
       .mockImplementationOnce(() => response(content));
     render(<MemoryRouter initialEntries={["/admin/catalog"]}><App /></MemoryRouter>);
+    expect(await screen.findByLabelText("Ecosystem name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ecosystem slug")).toBeInTheDocument();
+    expect(screen.getByLabelText("Description")).toBeInTheDocument();
+    expect(screen.getByLabelText("Display order")).toBeInTheDocument();
     const inputs = await screen.findAllByRole("textbox");
     fireEvent.change(inputs[0]!, { target: { value: "Java" } }); fireEvent.change(inputs[1]!, { target: { value: "java" } }); fireEvent.change(inputs[2]!, { target: { value: "Java ecosystem" } });
     fireEvent.click(screen.getByRole("button", { name: "Create ecosystem" }));
