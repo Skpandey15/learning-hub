@@ -61,9 +61,7 @@ Topic summary example:
 
 Returns the topic's current published version and ordered units. Response contains `ETag`; clients send `If-None-Match` on subsequent reads. If content is absent, return `404` with code `CONTENT_NOT_GENERATED` and the topic metadata endpoint still reports `MISSING`.
 
-### `POST /learning/topics/{topicId}/generation`
-
-Requests initial generation. Both V1 roles are permitted. The endpoint is idempotent for an active topic job and is protected by per-user and per-topic rate limits.
+Initial generation is an administrative operation at `POST /api/v1/admin/topics/{topicId}/generation-jobs`. Candidate and interviewer APIs do not trigger OpenAI calls. The operation is idempotent for an active topic job and is protected by administrator, per-topic, and global rate limits.
 
 Response: `202 Accepted` for a new job and `200 OK` when returning an existing active job.
 
@@ -77,13 +75,11 @@ Response: `202 Accepted` for a new job and `200 OK` when returning an existing a
 }
 ```
 
-### `GET /learning/generation-jobs/{jobId}`
+### `GET /api/v1/admin/generation-jobs/{jobId}`
 
-Returns safe job state. A user may read a job they requested; both roles may also see the active job for a topic without private requester data.
+Returns safe job state to an authorized administrator. Learners see only the published or missing content state through the topic API.
 
-### `POST /learning/topics/{topicId}/regeneration`
-
-Creates a new version. Disabled by default in V1 public UI and reserved for a future admin policy. The API exists only when the deployment property enables it.
+Regeneration uses the same administrative generation endpoint and always creates a new draft version. It never overwrites the published version.
 
 ## 4. Progress endpoints
 
@@ -161,7 +157,7 @@ The following is seed policy, not hardcoded controller logic:
 |---|---:|---:|---:|
 | Browse active catalog | Allow | Allow | Allow |
 | Read published content | Allow | Allow | Allow |
-| Request missing content | Allow | Allow | Allow |
+| Request missing content | Deny | Deny | Allow |
 | Manage own progress | Allow | Allow | Allow |
 | Read another user's progress | Deny | Deny | Deny |
 | Manage curriculum | Deny | Deny | Allow |

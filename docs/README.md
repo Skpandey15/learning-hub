@@ -1,5 +1,9 @@
 # Learning Hub V1 — Design Pack
 
+## Phase 3 study-material design
+
+- [Study-material platform design](STUDY_MATERIAL_PLATFORM_DESIGN.md) — authoritative end-to-end design for curriculum, AI-generated drafts, review/publication, learner access, progress, security, and delivery slices.
+
 ## Product vision
 
 Learning Hub is a greenfield, production-oriented study platform for candidates and interviewers. It combines a structured engineering curriculum with AI-generated study material and persistent learner progress.

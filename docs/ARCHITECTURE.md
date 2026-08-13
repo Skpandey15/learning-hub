@@ -124,18 +124,19 @@ Dependencies flow from API to application to domain/persistence. Cross-module ac
 ## 6. Content-generation lifecycle
 
 ```text
-MISSING → QUEUED → GENERATING → VALIDATING → PUBLISHED
-                    │               │
-                    └──────► FAILED ◄┘
+MISSING → QUEUED → GENERATING → VALIDATING → AWAITING_REVIEW → PUBLISHED
+                    │               │              │
+                    └──────► FAILED ◄──────────────┴──► REJECTED
 ```
 
 1. A topic page reports that content is missing.
-2. An authorized user requests generation.
+2. An authorized administrator requests generation.
 3. Spring Boot atomically creates a generation job and prevents duplicate active jobs.
 4. A worker invokes FastAPI and records the result.
-5. Spring Boot validates and transactionally writes a content version and its units.
-6. The version becomes current and the job becomes `PUBLISHED`.
-7. The UI polls the job or topic endpoint with bounded backoff.
+5. Spring Boot validates and transactionally writes a draft content version and its units.
+6. An administrator reviews, edits if required, and publishes or rejects the draft.
+7. Publication makes the immutable version current and the job becomes `PUBLISHED`.
+8. The admin UI polls the job with bounded backoff; learner reads never trigger generation.
 
 V1 may run the worker inside the Spring Boot process with a bounded executor. The database job record makes the lifecycle observable and restart-safe. No message broker is required.
 

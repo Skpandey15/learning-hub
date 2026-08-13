@@ -104,7 +104,7 @@ Pin model aliases in deployment configuration. Record model name, prompt version
 
 Generated material is AI-assisted and may contain errors. The UI presents a concise notice. Security-sensitive code must not include real credentials. Prompts prohibit malware instructions, credential harvesting, and destructive commands; normal defensive engineering education remains allowed.
 
-V1 has no full editorial console. Therefore publication uses conservative automated checks. A future version should add reviewer approval, feedback/reporting, source grounding, and controlled regeneration.
+V1 includes an administrator review console. Conservative automated checks are mandatory but insufficient for publication: validated output becomes a draft and requires explicit administrator approval. Feedback/reporting and source grounding remain future enhancements.
 
 ## 9. Failure mapping
 
