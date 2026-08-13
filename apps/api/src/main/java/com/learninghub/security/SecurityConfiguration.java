@@ -26,7 +26,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/session", "/api/v1/study/**")
+                        .requestMatchers("/api/v1/session", "/api/v1/study/**", "/api/v1/learning/**")
                             .hasAnyRole("CANDIDATE", "INTERVIEWER", "ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions

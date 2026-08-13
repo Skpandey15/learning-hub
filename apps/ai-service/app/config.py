@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     litellm_api_key: str = Field(min_length=8)
     study_model: str = "openai/gpt-5-mini"
     request_timeout_seconds: float = Field(default=60.0, ge=1.0, le=180.0)
+    prompt_version: str = "study-material-v1"
+    max_output_tokens: int = Field(default=8000, ge=1000, le=16000)
 
 
 @lru_cache

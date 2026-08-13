@@ -3,13 +3,21 @@ import re
 import time
 import uuid
 from collections.abc import Awaitable, Callable
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.observability import configure_logging, correlation_id_context
 from app.problems import ERROR_DEFINITIONS, AppError, ErrorCode, create_problem
+from app.security import require_service_identity
+from app.study_content import (
+    GeneratedContent,
+    GenerationRequest,
+    StudyContentGenerator,
+    get_generator,
+)
 
 CORRELATION_HEADER = "X-Correlation-ID"
 SAFE_CORRELATION_ID = re.compile(r"^[A-Za-z0-9._-]{8,128}$")
@@ -140,3 +148,14 @@ async def live() -> dict[str, str]:
 @app.get("/health/ready", include_in_schema=False)
 async def ready() -> dict[str, str]:
     return {"status": "UP"}
+
+
+@app.post(
+    "/internal/v1/study-content/generate",
+    dependencies=[Depends(require_service_identity)],
+)
+async def generate_study_content(
+    request: GenerationRequest,
+    generator: Annotated[StudyContentGenerator, Depends(get_generator)],
+) -> GeneratedContent:
+    return await generator.generate(request)

@@ -97,10 +97,11 @@ public final class ApiExceptionHandler {
     @ExceptionHandler(Exception.class)
     ProblemDetail unexpected(Exception exception, HttpServletRequest request) {
         LOGGER.atError()
+                .setCause(exception)
                 .addKeyValue("event.action", "unhandled_exception")
-                .addKeyValue("error.code", ErrorCode.INTERNAL_ERROR.name())
-                .addKeyValue("error.type", exception.getClass().getName())
-                .addKeyValue("error.fingerprint", ErrorFingerprint.of(exception))
+                .addKeyValue("failure.code", ErrorCode.INTERNAL_ERROR.name())
+                .addKeyValue("failure.type", exception.getClass().getName())
+                .addKeyValue("failure.fingerprint", ErrorFingerprint.of(exception))
                 .log("Unhandled request exception");
         return problems.create(ErrorCode.INTERNAL_ERROR, request, Map.of());
     }
