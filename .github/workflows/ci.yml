@@ -158,8 +158,8 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: false
-          cache-from: type=gha,scope=ci-${{ matrix.component }}
-          cache-to: type=gha,mode=max,scope=ci-${{ matrix.component }}
+          cache-from: type=gha,scope=release-${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.component }}
 
   compose:
     name: Compose configuration contract

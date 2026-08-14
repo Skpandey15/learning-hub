@@ -30,7 +30,12 @@ spec:
           image: {{ required "images.api digest is required" .Values.images.api | quote }}
           imagePullPolicy: IfNotPresent
           command: [java]
-          args: [-XX:MaxRAMPercentage=75, -jar, /app/app.jar, --spring.main.web-application-type=none]
+          args:
+            - -XX:MaxRAMPercentage=75
+            - -jar
+            - /app/app.jar
+            - --spring.main.web-application-type=none
+            - --generation.worker.enabled=false
           securityContext:
             {{- include "learning-hub.containerSecurityContext" . | nindent 12 }}
             runAsUser: 10001
