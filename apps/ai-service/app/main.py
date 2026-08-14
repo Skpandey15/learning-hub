@@ -116,6 +116,15 @@ async def validation_error_handler(
         {"field": ".".join(str(part) for part in error["loc"]), "message": error["msg"]}
         for error in exception.errors()
     ]
+    LOGGER.warning(
+        "Request validation failed",
+        extra={
+            "event.action": "request_validation_failed",
+            "error.code": ErrorCode.VALIDATION_FAILED.value,
+            "validation.fields": ",".join(violation["field"] for violation in violations),
+            "validation.messages": ";".join(violation["message"] for violation in violations),
+        },
+    )
     return _problem_response(request, ErrorCode.VALIDATION_FAILED, violations=violations)
 
 

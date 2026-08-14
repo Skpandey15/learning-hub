@@ -44,7 +44,7 @@ def request() -> GenerationRequest:
     )
 
 
-def content(topic_id: str = "topic-1") -> dict[str, object]:
+def content() -> dict[str, object]:
     unit = {
         "stableKey": "unit",
         "type": "THEORY",
@@ -57,13 +57,10 @@ def content(topic_id: str = "topic-1") -> dict[str, object]:
     }
     units = [{**unit, "stableKey": f"unit-{index}"} for index in range(1, 5)]
     return {
-        "topicId": topic_id,
         "title": "Collections",
         "introduction": "A sufficiently detailed introduction to collections.",
         "units": units,
         "conclusion": "A sufficiently detailed conclusion about collections.",
-        "modelName": "ignored",
-        "promptVersion": "ignored",
     }
 
 
@@ -129,7 +126,13 @@ async def test_generator_maps_provider_and_output_failures(monkeypatch: pytest.M
         (FakeResponse({}, fail=True), ErrorCode.PROVIDER_UNAVAILABLE),
         (FakeResponse({"choices": []}), ErrorCode.INVALID_MODEL_OUTPUT),
         (
-            FakeResponse({"choices": [{"message": {"content": json.dumps(content("other"))}}]}),
+            FakeResponse(
+                {
+                    "choices": [
+                        {"message": {"content": json.dumps({**content(), "topicId": "other"})}}
+                    ]
+                }
+            ),
             ErrorCode.INVALID_MODEL_OUTPUT,
         ),
     ]
@@ -142,6 +145,8 @@ async def test_generator_maps_provider_and_output_failures(monkeypatch: pytest.M
 
 
 def test_contract_rejects_unsafe_or_duplicate_content() -> None:
+    normalized = Unit.model_validate({**content()["units"][0], "type": "theory"})  # type: ignore[index]
+    assert normalized.type == "THEORY"
     with pytest.raises(ValidationError):
         Unit.model_validate({**content()["units"][0], "stableKey": "Unsafe Key"})  # type: ignore[index]
     with pytest.raises(ValidationError):
@@ -157,7 +162,14 @@ def test_contract_rejects_unsafe_or_duplicate_content() -> None:
 def test_internal_endpoint_requires_service_identity_and_uses_generator_override() -> None:
     class StubGenerator:
         async def generate(self, generation_request: GenerationRequest) -> GeneratedContent:
-            return GeneratedContent.model_validate(content(generation_request.topic.id))
+            return GeneratedContent.model_validate(
+                {
+                    **content(),
+                    "topicId": generation_request.topic.id,
+                    "modelName": "test-model",
+                    "promptVersion": generation_request.prompt_version,
+                }
+            )
 
     app.dependency_overrides[get_generator] = lambda: StubGenerator()
     from app.config import get_settings

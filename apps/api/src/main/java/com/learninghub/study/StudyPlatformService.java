@@ -13,17 +13,27 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class StudyPlatformService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(StudyPlatformService.class);
     private static final TypeReference<List<String>> STRINGS = new TypeReference<>() {};
+    private static final Map<Integer, String> AI_HTTP_ERROR_CODES = Map.of(
+            400, "AI_REQUEST_INVALID", 401, "AI_SERVICE_UNAUTHENTICATED",
+            403, "AI_SERVICE_FORBIDDEN", 429, "AI_SERVICE_RATE_LIMITED",
+            502, "AI_MODEL_OUTPUT_INVALID", 503, "AI_PROVIDER_UNAVAILABLE");
     private final JdbcClient jdbc;
     private final ObjectMapper json;
     private final RestClient ai;
@@ -31,12 +41,12 @@ public class StudyPlatformService {
     private final String model;
     private final String promptVersion;
 
-    StudyPlatformService(JdbcClient jdbc, ObjectMapper json,
+    StudyPlatformService(JdbcClient jdbc, ObjectMapper json, RestClient.Builder restClientBuilder,
             @Value("${AI_SERVICE_BASE_URL:http://localhost:8000}") String aiBaseUrl,
             @Value("${INTERNAL_AI_SERVICE_TOKEN:local-development-token-must-be-32-chars}") String serviceToken,
             @Value("${STUDY_MODEL:openai/gpt-5-mini}") String model,
             @Value("${PROMPT_VERSION:study-material-v1}") String promptVersion) {
-        this.jdbc = jdbc; this.json = json; this.ai = RestClient.builder().baseUrl(aiBaseUrl).build();
+        this.jdbc = jdbc; this.json = json; this.ai = restClientBuilder.baseUrl(aiBaseUrl).build();
         this.serviceToken = serviceToken; this.model = model; this.promptVersion = promptVersion;
     }
 
@@ -150,13 +160,27 @@ INSERT INTO content_generation_job(id,topic_id,requested_by_subject,status,reque
     public void generate(UUID jobId) {
         try {
             AiRequest request = generationRequest(jobId);
+            byte[] payload = json.writeValueAsBytes(request);
             AiContent content = ai.post().uri("/internal/v1/study-content/generate")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + serviceToken)
                     .header("Idempotency-Key", jobId.toString()).header("X-Correlation-ID", job(jobId).id().toString())
-                    .body(request).retrieve().body(AiContent.class);
+                    .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON)
+                    .body(payload).retrieve().body(AiContent.class);
             if (content == null) throw new IllegalStateException("Empty AI response");
             persistDraft(jobId, request.topic().id(), content);
+        } catch (RestClientResponseException exception) {
+            String providerCode = AI_HTTP_ERROR_CODES.getOrDefault(
+                    exception.getStatusCode().value(), "AI_SERVICE_REJECTED");
+            LOGGER.error("Study-material generation rejected: jobId={}, status={}, providerCode={}",
+                    jobId, exception.getStatusCode().value(), providerCode);
+            failJob(jobId, providerCode);
+        } catch (ResourceAccessException exception) {
+            LOGGER.error("Study-material generation transport failure: jobId={}, exceptionType={}",
+                    jobId, exception.getClass().getSimpleName(), exception);
+            failJob(jobId, "AI_SERVICE_UNAVAILABLE");
         } catch (Exception exception) {
+            LOGGER.error("Study-material generation failed: jobId={}, exceptionType={}",
+                    jobId, exception.getClass().getSimpleName(), exception);
             failJob(jobId, "AI_GENERATION_FAILED");
         }
     }
