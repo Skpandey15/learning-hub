@@ -1,9 +1,9 @@
-FROM eclipse-temurin:25-jdk-jammy AS build
+FROM --platform=$BUILDPLATFORM eclipse-temurin:25-jdk-jammy AS build
 WORKDIR /workspace
 COPY gradlew gradlew.bat settings.gradle.kts build.gradle.kts gradle.properties ./
 COPY gradle ./gradle
 COPY apps/api ./apps/api
-RUN chmod +x gradlew && for attempt in 1 2 3; do \
+RUN --mount=type=cache,target=/root/.gradle chmod +x gradlew && for attempt in 1 2 3; do \
       ./gradlew :apps:api:bootJar --no-daemon && break; \
       test "$attempt" -lt 3 || exit 1; \
       sleep "$((attempt * 5))"; \

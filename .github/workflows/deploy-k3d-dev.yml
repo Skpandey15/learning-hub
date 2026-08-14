@@ -56,7 +56,8 @@ jobs:
         run: |
           $manifest = Get-Content -Raw release/release-manifest.json | ConvertFrom-Json
           helm upgrade --install learning-hub deploy/charts/learning-hub `
-            --namespace learning-hub-development --create-namespace --atomic --wait --timeout 10m `
+            --namespace learning-hub-development --create-namespace `
+            --server-side=true --force-conflicts --rollback-on-failure --wait --timeout 10m `
             --set-string images.api="$($manifest.images.api.image)@$($manifest.images.api.digest)" `
             --set-string images.aiService="$($manifest.images.'ai-service'.image)@$($manifest.images.'ai-service'.digest)" `
             --set-string images.web="$($manifest.images.web.image)@$($manifest.images.web.digest)" `

@@ -1,7 +1,7 @@
-FROM node:24.18.1-alpine AS build
+FROM --platform=$BUILDPLATFORM node:24.18.1-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 COPY . .
 RUN npm run build
 
