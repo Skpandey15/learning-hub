@@ -11,7 +11,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.learninghub.shared.error.ApiException;
 import com.learninghub.study.StudyModels.AiContent;
+import com.learninghub.study.StudyModels.AiRequest;
+import com.learninghub.study.StudyModels.AiTopic;
 import com.learninghub.study.StudyModels.AiUnit;
+import com.learninghub.study.StudyModels.SkillLevel;
 import com.learninghub.study.StudyModels.UnitType;
 import java.util.List;
 import java.util.UUID;
@@ -174,6 +177,20 @@ class StudyPlatformIntegrationTest {
         assertThatThrownBy(() -> service.persistDraft(jobId, topicId, unsafe)).isInstanceOf(ApiException.class);
         service.generate(jobId);
         assertThat(service.job(jobId).status()).isEqualTo(StudyModels.JobStatus.FAILED);
+    }
+
+    @Test
+    void serializesAiGenerationContractAsCamelCaseJson() throws Exception {
+        AiRequest request = new AiRequest(UUID.randomUUID(), "study-material-v1",
+                new AiTopic(UUID.randomUUID(), "Java", "Java", "OOPS", "Four pillars",
+                        SkillLevel.BEGINNER, 60, List.of("Learn with examples")));
+
+        JsonNode payload = json.readTree(json.writeValueAsString(request));
+
+        assertThat(payload.has("jobId")).isTrue();
+        assertThat(payload.has("promptVersion")).isTrue();
+        assertThat(payload.get("topic").has("skillLevel")).isTrue();
+        assertThat(payload.get("topic").has("estimatedMinutes")).isTrue();
     }
 
     private org.springframework.test.web.servlet.request.RequestPostProcessor admin() {
